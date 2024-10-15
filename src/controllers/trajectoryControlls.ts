@@ -1,3 +1,5 @@
+
+
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 
@@ -8,10 +10,21 @@ export const getAllTrajectories = async (req: Request, res: Response): Promise<v
     try {
         
         const { longitude, latitude, date,taxi_id } = req.query;
-        const startDate = date ? new Date(`${date}T00:00:00Z`) : undefined;
-        const endDate = date ? new Date(`${date}T23:59:59Z`):undefined;        
-        const trajectories = await prisma.trajectories.findMany({
 
+        //manejo de taxi_id
+        if (taxi_id && isNaN(Number(taxi_id))) {
+          res.status(400).json({error: 'El taxi_id debe ser un numero.'});
+          return;
+           }
+           if (!date || isNaN(new Date ().getTime())){
+            res.status(400).json({error: 'El parametro debe tener una fecha valida.'});
+           }
+
+        const startDate = date ? new Date(`${date}T00:00:00Z`) : undefined;
+        const endDate = date ? new Date(`${date}T23:59:59Z`):undefined;
+        
+        
+        const trajectories = await prisma.trajectories.findMany({
             where: {
                 // Condiciones de búsqueda
                 longitude: longitude ? Number(longitude) : undefined,
@@ -25,21 +38,26 @@ export const getAllTrajectories = async (req: Request, res: Response): Promise<v
               },
 
             },
-
+              include: {
+                taxi: true,
+              }            
             
-            select: {
-                id: true,       
-                taxi_id: true,   
-                longitude: true,
-                latitude: true,
-                date: true,     
-                },
         });
 
-      res.json({trajectories});
+      res.json(trajectories.map(({ id, date, taxi_id, longitude, taxi}) => ({
+        id,
+        plate:taxi_id,
+        date,
+        taxiId:taxi_id,
+        longitude,
+        latitude,
+
+      })));
     } catch (error) {
         if (!res.headersSent){
+          if (!res.headersSent){
         res.status(400).json({ error: 'Error al obtener los registros de trayectorias' });
-      }
+          }
+        }
     }
-};
+  };
