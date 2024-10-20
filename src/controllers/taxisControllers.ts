@@ -1,46 +1,27 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { findTaxis } from '../models/taxiModel';
 
-const prisma = new PrismaClient();
-
-export const getAllTaxis = async (req: Request, res: Response): Promise<void> => {
+export const getAllTaxis = async (req: Request, res: Response): Promise<void> => {          // <void> retorna una promesa sin valor
     try {
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
-        const plate = req.query.plate as string;                                                                 // Obtiene plate
+        const page = parseInt(req.query.page as string) || 1;       //parseint covierte de string a numero, el cliente da valor en string
+        const limit = parseInt(req.query.limit as string) || 10;    // si el cliente no da un valor para limite o page, se usa 10 por defecto
+        const plate = req.query.plate as string;                    //obtiene plate
 
-        //manejo de error
-        if (isNaN(page) || page < 1) {
-            res.status(400).json({ error: 'pagina o limite invalido' });
-            return; 
-        }
-
-        if (isNaN(limit) || limit < 1) {
+        if (isNaN(page) || page < 1 || isNaN(limit) || limit < 1) {         // sino es un numero seria true y retorna el error  400
             res.status(400).json({ error: 'pagina o limite invalido' });
             return;
         }
+           
+        const taxis = await findTaxis(page, limit, plate);          //findtaxis metodo que se usa para la info de la base de datos
 
-        const taxis = await prisma.taxis.findMany({                         //obtiene los registros de la base de datos
-            skip: (page - 1) * limit,
-            take: limit,
-            where: plate ? {
-                plate: {
-                    startsWith: plate,   
-                    mode: 'insensitive',
-                },
-            } : undefined,
-            select: {
-                id: true,
-                plate: true,
-            },
-        });
-
-        if (taxis.length === 0) {
+        if (taxis.length === 0) {                        //se verifica la longitud de taxis y si es igual a 0 se retorna el error de abajp
             res.status(400).json({ error: 'Página no encontrada' });
-            return;//sale de la fx sin retornar valor
+            return;
         }
+
         res.json(taxis);
     } catch (error) {
         res.status(500).json({ error: 'Error al obtener los registros de taxis' });
     }
 };
+// el código valida los parámetros page, limite y plate de la solicitud, realiza una búsqueda paginada, y si encuentra datos válidos, los devuelve como JSON.

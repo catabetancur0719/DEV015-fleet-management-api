@@ -28,3 +28,10 @@ model trajectories {
 
   taxi      taxis    @relation(fields: [taxi_id], references: [id], onDelete: Cascade)
 }
+
+model users {
+ id   Int  @id @default(autoincrement())
+ name  String
+ email  String
+ password String
+}
